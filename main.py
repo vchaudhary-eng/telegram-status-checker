@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
-from playwright.async_api import async_playwright
+from fastapi.templating import Jinja2Templates
+import os
+
+from playwright_check import check_telegram_urls
 
 app = FastAPI()
 
-# Allow CORS for any origin
+# Enable CORS (for local frontend testing or deployment issues)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,36 +16,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class URLList(BaseModel):
-    urls: List[str]
+# HTML templates
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_ui(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/api/verify")
-async def verify_urls(data: URLList):
-    results = []
+async def verify_links(request: Request):
+    data = await request.json()
+    urls = data.get("urls", [])
 
-    async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
+    if not urls or not isinstance(urls, list):
+        return JSONResponse(status_code=400, content={"error": "Invalid or missing 'urls' list."})
 
-        for url in data.urls:
-            try:
-                response = await page.goto(url, timeout=15000)
-                content = await page.content()
-
-                if 'If you have <strong>Telegram</strong>' in content:
-                    status = "Suspended"
-                elif 'message cannot be displayed' in content:
-                    status = "Removed"
-                elif 'This channel can’t be displayed' in content:
-                    status = "Suspended"
-                elif 'views' in content:
-                    status = "Active"
-                else:
-                    status = "Dead"
-            except:
-                status = "Error"
-            results.append({"url": url, "status": status})
-
-        await browser.close()
+    results = await check_telegram_urls(urls)
     return {"results": results}
