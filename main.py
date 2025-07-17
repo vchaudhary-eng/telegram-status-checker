@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -6,7 +6,7 @@ from playwright.async_api import async_playwright
 
 app = FastAPI()
 
-# CORS allow all
+# Allow CORS for any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
