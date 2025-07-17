@@ -2,12 +2,10 @@ services:
   - type: web
     name: telegram-status-checker
     env: python
-    buildCommand: |
-      curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-      apt-get install -y nodejs
-      pip install -r requirements.txt
-      playwright install --with-deps
-    startCommand: uvicorn main:app --host=0.0.0.0 --port=10000
+    buildCommand: pip install -r requirements.txt
+    startCommand: |
+      playwright install chromium --with-deps
+      uvicorn main:app --host=0.0.0.0 --port=10000
     envVars:
       - key: PYTHON_VERSION
         value: 3.10
