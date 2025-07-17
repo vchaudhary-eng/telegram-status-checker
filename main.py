@@ -1,22 +1,49 @@
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import asyncio
-from playwright_check import check_telegram_url
+from typing import List
+from playwright.async_api import async_playwright
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
-class URLItem(BaseModel):
-    url: str
+# CORS allow all
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_ui():
-    with open("static/index.html", "r") as f:
-        return HTMLResponse(content=f.read(), status_code=200)
+class URLList(BaseModel):
+    urls: List[str]
 
-@app.post("/api/check")
-async def check_url(item: URLItem):
-    status = await check_telegram_url(item.url)
-    return {"status": status}
+@app.post("/api/verify")
+async def verify_urls(data: URLList):
+    results = []
+
+    async with async_playwright() as p:
+        browser = await p.firefox.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        for url in data.urls:
+            try:
+                response = await page.goto(url, timeout=15000)
+                content = await page.content()
+
+                if 'If you have <strong>Telegram</strong>' in content:
+                    status = "Suspended"
+                elif 'message cannot be displayed' in content:
+                    status = "Removed"
+                elif 'This channel can’t be displayed' in content:
+                    status = "Suspended"
+                elif 'views' in content:
+                    status = "Active"
+                else:
+                    status = "Dead"
+            except:
+                status = "Error"
+            results.append({"url": url, "status": status})
+
+        await browser.close()
+    return {"results": results}
