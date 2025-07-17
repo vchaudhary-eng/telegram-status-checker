@@ -1,57 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Telegram Link Checker</title>
+  <meta charset="UTF-8">
+  <title>Telegram Status Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; margin: 30px; background: #f5f5f5; }
-    textarea { width: 100%; height: 200px; font-size: 16px; padding: 10px; }
-    button { margin-top: 10px; padding: 10px 20px; font-size: 16px; }
-    table { margin-top: 20px; width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
-    th { background: #eee; }
+    body {
+      font-family: sans-serif;
+      background: #f9f9f9;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    textarea {
+      width: 90%;
+      max-width: 700px;
+      height: 180px;
+      padding: 1rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 1rem;
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      margin: 2rem auto;
+      border-collapse: collapse;
+      width: 95%;
+      max-width: 900px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.8rem;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .active { color: green; font-weight: bold; }
+    .removed { color: red; font-weight: bold; }
+    .suspended { color: orange; font-weight: bold; }
+
+    footer {
+      margin-top: 3rem;
+      color: #888;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
-  <h2>Telegram Link Checker</h2>
-  <form id="form">
-    <textarea id="urls" placeholder="Enter Telegram URLs, one per line..."></textarea>
+
+  <h1>Telegram Status Checker 🔎</h1>
+
+  <form id="checker-form">
+    <textarea id="url-input" placeholder="Paste Telegram URLs here, one per line...&#10;Example: https://t.me/example_channel&#10;https://t.me/example_channel/123"></textarea>
+    <br>
     <button type="submit">Check Status</button>
   </form>
 
-  <table id="resultTable" style="display:none;">
+  <table id="results-table" style="display: none;">
     <thead>
       <tr>
-        <th>URL</th>
+        <th>Telegram URL</th>
         <th>Status</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
+  <footer>Created by Vansh Chaudhary</footer>
+
   <script>
-    document.getElementById('form').addEventListener('submit', async function(e) {
+    const form = document.getElementById('checker-form');
+    const input = document.getElementById('url-input');
+    const table = document.getElementById('results-table');
+    const tbody = table.querySelector('tbody');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const raw = document.getElementById('urls').value;
-      const urlList = raw.split('\n').map(line => line.trim()).filter(line => line);
-      if (urlList.length === 0) return alert('Please enter some URLs.');
+      const urls = input.value.split('\n').map(url => url.trim()).filter(Boolean);
 
-      const res = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: urlList })
-      });
+      if (urls.length === 0) {
+        alert("Please enter at least one Telegram URL.");
+        return;
+      }
 
-      const data = await res.json();
-      const tbody = document.querySelector('#resultTable tbody');
       tbody.innerHTML = '';
-      data.results.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${item.url}</td><td>${item.status}</td>`;
-        tbody.appendChild(tr);
-      });
-      document.getElementById('resultTable').style.display = 'table';
+      table.style.display = 'table';
+
+      for (const url of urls) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${url}</td><td>Checking...</td>`;
+        tbody.appendChild(row);
+
+        try {
+          const res = await fetch('/api/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: [url] })
+          });
+
+          if (!res.ok) throw new Error('Network error');
+          const data = await res.json();
+          const status = data[0]?.status || 'Unknown';
+
+          let statusClass = '';
+          let symbol = '';
+          if (status === 'Active') {
+            statusClass = 'active';
+            symbol = '🟢';
+          } else if (status === 'Removed') {
+            statusClass = 'removed';
+            symbol = '🔴';
+          } else if (status === 'Suspended') {
+            statusClass = 'suspended';
+            symbol = '⚠️';
+          }
+
+          row.cells[1].innerHTML = `<span class="${statusClass}">${symbol} ${status}</span>`;
+        } catch (err) {
+          row.cells[1].innerHTML = `<span class="suspended">⚠️ Error</span>`;
+        }
+      }
     });
   </script>
+
 </body>
 </html>
