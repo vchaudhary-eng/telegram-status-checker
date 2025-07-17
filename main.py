@@ -1,55 +1,45 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import asyncio
-import subprocess
-from pathlib import Path
-from bs4 import BeautifulSoup
-import httpx
+from playwright.async_api import async_playwright
+from typing import List
+import re
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-# Install browser if not present
-async def ensure_browser_installed():
-    if not Path("/usr/bin/google-chrome").exists():
-        subprocess.run(["playwright", "install", "chromium", "--with-deps"], check=True)
-
-asyncio.run(ensure_browser_installed())
-
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-
-async def check_telegram_status(url: str) -> str:
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.get(url)
-            html = response.text.lower()
-            if "username not found" in html or "this channel can't be displayed" in html:
-                return "Suspended ❌"
-            elif "message not found" in html or "message doesn't exist" in html:
-                return "Removed ⚠️"
-            elif "views" in html or "reactions" in html:
-                return "Active ✅"
-            else:
-                return "Unknown ❓"
-    except Exception as e:
-        return f"Error ⛔"
-
-
-@app.post("/check", response_class=HTMLResponse)
-async def check(request: Request, urls: str = Form(...)):
-    url_list = [u.strip() for u in urls.strip().splitlines() if u.strip()]
+@app.post("/api/check", response_class=HTMLResponse)
+async def check_telegram(request: Request, urls: str = Form(...)):
+    url_list = [url.strip() for url in urls.splitlines() if url.strip()]
     results = []
 
-    for url in url_list:
-        status = await check_telegram_status(url)
-        results.append((url, status))
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
 
-    return templates.TemplateResponse("index.html", {"request": request, "results": results, "urls": urls})
+        for url in url_list:
+            try:
+                await page.goto(url, timeout=15000)
+                content = await page.content()
+
+                if "This channel can't be displayed" in content or "is unavailable" in content:
+                    status = "Suspended"
+                elif "message was deleted" in content or "This message doesn't exist" in content:
+                    status = "Removed"
+                elif "views" in content or "reactions" in content:
+                    status = "Active"
+                else:
+                    status = "Unknown"
+            except Exception:
+                status = "Error"
+            results.append((url, status))
+
+        await browser.close()
+
+    return templates.TemplateResponse("index.html", {"request": request, "results": results})
