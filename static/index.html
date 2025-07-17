@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Telegram URL Checker</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    textarea { width: 100%; height: 150px; }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    button { margin-top: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h2>Telegram URL Status Checker</h2>
+  <textarea id="urls" placeholder="Enter Telegram post/channel URLs..."></textarea><br>
+  <button onclick="checkURLs()">Check Status</button>
+
+  <table id="resultTable" style="display:none;">
+    <thead>
+      <tr><th>URL</th><th>Status</th></tr>
+    </thead>
+    <tbody id="results"></tbody>
+  </table>
+
+  <script>
+    async function checkURLs() {
+      const urls = document.getElementById("urls").value.trim().split("\n");
+      const table = document.getElementById("resultTable");
+      const tbody = document.getElementById("results");
+      tbody.innerHTML = "";
+      table.style.display = "table";
+
+      for (const url of urls) {
+        const row = document.createElement("tr");
+        const urlCell = document.createElement("td");
+        const statusCell = document.createElement("td");
+        urlCell.textContent = url;
+        statusCell.textContent = "Checking...";
+        row.appendChild(urlCell);
+        row.appendChild(statusCell);
+        tbody.appendChild(row);
+
+        try {
+          const res = await fetch("/api/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: url })
+          });
+          const data = await res.json();
+          statusCell.textContent = data.status;
+        } catch {
+          statusCell.textContent = "Error";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
