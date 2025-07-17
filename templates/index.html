@@ -3,151 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <title>Telegram Status Checker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f9f9f9;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
       padding: 2rem;
-      text-align: center;
     }
-
     h1 {
+      text-align: center;
       color: #333;
-      margin-bottom: 1rem;
     }
-
-    textarea {
-      width: 90%;
-      max-width: 700px;
-      height: 180px;
+    form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
       padding: 1rem;
-      font-size: 1rem;
-      border-radius: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 0.5rem;
+      border-radius: 5px;
       border: 1px solid #ccc;
       resize: vertical;
     }
-
     button {
       margin-top: 1rem;
-      padding: 0.7rem 2rem;
-      font-size: 1rem;
-      background-color: #4CAF50;
-      color: white;
+      padding: 0.5rem 1rem;
       border: none;
-      border-radius: 8px;
+      background: #28a745;
+      color: white;
+      border-radius: 5px;
       cursor: pointer;
     }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
     table {
       margin: 2rem auto;
       border-collapse: collapse;
-      width: 95%;
-      max-width: 900px;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      width: 90%;
+      background: white;
     }
-
     th, td {
+      padding: 0.5rem;
       border: 1px solid #ddd;
-      padding: 0.8rem;
+      text-align: center;
     }
-
     th {
-      background-color: #f2f2f2;
-    }
-
-    .active { color: green; font-weight: bold; }
-    .removed { color: red; font-weight: bold; }
-    .suspended { color: orange; font-weight: bold; }
-
-    footer {
-      margin-top: 3rem;
-      color: #888;
-      font-size: 0.9rem;
+      background: #007bff;
+      color: white;
     }
   </style>
 </head>
 <body>
-
-  <h1>Telegram Status Checker 🔎</h1>
-
-  <form id="checker-form">
-    <textarea id="url-input" placeholder="Paste Telegram URLs here, one per line...&#10;Example: https://t.me/example_channel&#10;https://t.me/example_channel/123"></textarea>
-    <br>
+  <h1>Telegram Status Checker</h1>
+  <form method="post" action="/check">
+    <label for="urls">Paste Telegram URLs (one per line):</label><br>
+    <textarea name="urls" required placeholder="https://t.me/example1/123&#10;https://t.me/example2/456">{{ urls or '' }}</textarea><br>
     <button type="submit">Check Status</button>
   </form>
 
-  <table id="results-table" style="display: none;">
-    <thead>
-      <tr>
-        <th>Telegram URL</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <footer>Created by Vansh Chaudhary</footer>
-
-  <script>
-    const form = document.getElementById('checker-form');
-    const input = document.getElementById('url-input');
-    const table = document.getElementById('results-table');
-    const tbody = table.querySelector('tbody');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const urls = input.value.split('\n').map(url => url.trim()).filter(Boolean);
-
-      if (urls.length === 0) {
-        alert("Please enter at least one Telegram URL.");
-        return;
-      }
-
-      tbody.innerHTML = '';
-      table.style.display = 'table';
-
-      for (const url of urls) {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${url}</td><td>Checking...</td>`;
-        tbody.appendChild(row);
-
-        try {
-          const res = await fetch('/api/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ urls: [url] })
-          });
-
-          if (!res.ok) throw new Error('Network error');
-          const data = await res.json();
-          const status = data[0]?.status || 'Unknown';
-
-          let statusClass = '';
-          let symbol = '';
-          if (status === 'Active') {
-            statusClass = 'active';
-            symbol = '🟢';
-          } else if (status === 'Removed') {
-            statusClass = 'removed';
-            symbol = '🔴';
-          } else if (status === 'Suspended') {
-            statusClass = 'suspended';
-            symbol = '⚠️';
-          }
-
-          row.cells[1].innerHTML = `<span class="${statusClass}">${symbol} ${status}</span>`;
-        } catch (err) {
-          row.cells[1].innerHTML = `<span class="suspended">⚠️ Error</span>`;
-        }
-      }
-    });
-  </script>
-
+  {% if results %}
+    <table>
+      <thead>
+        <tr>
+          <th>Telegram URL</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for url, status in results %}
+        <tr>
+          <td><a href="{{ url }}" target="_blank">{{ url }}</a></td>
+          <td>{{ status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 </body>
 </html>
