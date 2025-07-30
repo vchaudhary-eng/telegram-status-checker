@@ -1,39 +1,35 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from playwright.async_api import async_playwright
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, MessageHandler, Filters
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+import os
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+app = Flask(__name__)
+TOKEN = os.environ.get("BOT_TOKEN")
+bot = Bot(token=TOKEN)
 
-@app.post("/api/check", response_class=HTMLResponse)
-async def check(request: Request, urls: str = Form(...)):
-    url_list = [u.strip() for u in urls.splitlines() if u.strip()]
-    results = []
+def handle_message(update, context):
+    message = update.message
+    chat_id = message.chat_id
+    channel_username = message.chat.username  # Channel username (if any)
+    text = message.text
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        for url in url_list:
-            try:
-                await page.goto(url, timeout=15000)
-                content = await page.content()
+    # Simple verification logic
+    VERIFIED_CHANNELS = ["your_verified_channel"]  # Replace with actual
+    if channel_username in VERIFIED_CHANNELS:
+        response = "✅ Verified post!"
+    else:
+        response = "⚠️ Unverified post."
 
-                if "this channel can’t be displayed" in content.lower():
-                    status = "Suspended"
-                elif "message not found" in content.lower() or "message doesn't exist" in content.lower():
-                    status = "Removed"
-                elif "views" in content.lower():
-                    status = "Active"
-                else:
-                    status = "Unknown"
-            except:
-                status = "Error"
-            results.append((url, status))
-        await browser.close()
+    bot.send_message(chat_id=chat_id, text=response)
 
-    return templates.TemplateResponse("index.html", {"request": request, "results": results})
+@app.route('/', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher = Dispatcher(bot, None, workers=0)
+    dispatcher.add_handler(MessageHandler(Filters.text, handle_message))
+    dispatcher.process_update(update)
+    return 'ok'
+
+if __name__ == '__main__':
+    app.run()
