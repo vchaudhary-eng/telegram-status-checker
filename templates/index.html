@@ -1,47 +1,55 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Meta Scraper</title>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    textarea { width: 100%; height: 120px; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; }
-    th, td { padding: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Meta Description Scraper</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        textarea { width: 100%; height: 100px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        th { background: #f0f0f0; }
+    </style>
 </head>
 <body>
-  <h1>Meta Description Scraper</h1>
-  <form id="scrapeForm">
-    <textarea id="urls" placeholder="Enter URLs (one per line)"></textarea><br><br>
-    <button type="submit">Scrape</button>
-  </form>
+    <h2>Meta Description Scraper</h2>
+    <textarea id="urls" placeholder="Paste one URL per line"></textarea><br><br>
+    <button onclick="startScraping()">Start Scraping</button>
 
-  <table id="resultTable">
-    <thead>
-      <tr><th>URL</th><th>Title</th><th>Description</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <table id="resultTable">
+        <thead>
+            <tr>
+                <th>URL</th>
+                <th>Meta Description</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
-<script>
-const form = document.getElementById('scrapeForm');
-const tableBody = document.querySelector('#resultTable tbody');
+    <script>
+        async function startScraping() {
+            const urls = document.getElementById("urls").value.split("\n").map(u => u.trim()).filter(u => u);
+            const tbody = document.querySelector("#resultTable tbody");
+            tbody.innerHTML = "";
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  tableBody.innerHTML = '';
-  const urls = document.getElementById('urls').value.split('\n').map(u=>u.trim()).filter(u=>u);
-  for (let url of urls) {
-    const formData = new FormData();
-    formData.append("url", url);
-    const res = await fetch('/api/scrape', {method: 'POST', body: formData});
-    const data = await res.json();
-    const row = document.createElement('tr');
-    row.innerHTML = `<td>${data.url}</td><td>${data.title}</td><td>${data.description}</td>`;
-    tableBody.appendChild(row);
-  }
-});
-</script>
+            for (const url of urls) {
+                const formData = new FormData();
+                formData.append("url", url);
+
+                try {
+                    const res = await fetch("/api/scrape", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await res.json();
+                    const row = `<tr><td>${data.url}</td><td>${data.description}</td></tr>`;
+                    tbody.insertAdjacentHTML("beforeend", row);
+                } catch (err) {
+                    const row = `<tr><td>${url}</td><td>Error fetching</td></tr>`;
+                    tbody.insertAdjacentHTML("beforeend", row);
+                }
+            }
+        }
+    </script>
 </body>
 </html>
