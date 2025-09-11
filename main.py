@@ -1,35 +1,27 @@
-from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, MessageHandler, Filters
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import httpx
+from bs4 import BeautifulSoup
 
-import os
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app = Flask(__name__)
-TOKEN = os.environ.get("BOT_TOKEN")
-bot = Bot(token=TOKEN)
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-def handle_message(update, context):
-    message = update.message
-    chat_id = message.chat_id
-    channel_username = message.chat.username  # Channel username (if any)
-    text = message.text
-
-    # Simple verification logic
-    VERIFIED_CHANNELS = ["your_verified_channel"]  # Replace with actual
-    if channel_username in VERIFIED_CHANNELS:
-        response = "✅ Verified post!"
-    else:
-        response = "⚠️ Unverified post."
-
-    bot.send_message(chat_id=chat_id, text=response)
-
-@app.route('/', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher = Dispatcher(bot, None, workers=0)
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_message))
-    dispatcher.process_update(update)
-    return 'ok'
-
-if __name__ == '__main__':
-    app.run()
+@app.post("/api/scrape")
+async def scrape(url: str = Form(...)):
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(url, follow_redirects=True)
+        soup = BeautifulSoup(resp.text, "html.parser")
+        title = soup.title.string.strip() if soup.title else "N/A"
+        desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", attrs={"property": "og:description"})
+        desc = desc_tag["content"].strip() if desc_tag and desc_tag.get("content") else "N/A"
+        return JSONResponse({"url": url, "title": title, "description": desc})
+    except Exception as e:
+        return JSONResponse({"url": url, "title": "Error", "description": str(e)})
