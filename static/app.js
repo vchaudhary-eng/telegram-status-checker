@@ -1,49 +1,41 @@
-const btn = document.getElementById("scrapeBtn");
-const ta = document.getElementById("urls");
-const statusEl = document.getElementById("status");
-const tbody = document.querySelector("#results tbody");
+const btn = document.getElementById('scrapeBtn');
+const ta = document.getElementById('urls');
+const statusEl = document.getElementById('status');
+const tbody = document.querySelector('#results tbody');
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
 
 function addRow(obj, idx){
-  const tr = document.createElement("tr");
-  // Input URL: plain text (NO hyperlink)
-  const inputUrlCell = `<td>${idx+1}</td><td class="mono" style="word-break:break-all;">${obj.input_url}</td>`;
-  const html = `
-    ${inputUrlCell}
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${idx+1}</td>
+    <td><div class="mono nowrap">${escapeHtml(obj.input_url)}</div></td>
     <td>${obj.title}</td>
     <td>${obj.duration_seconds}</td>
     <td>${obj.duration_hhmmss}</td>
     <td>${obj.views}</td>
     <td>${obj.upload_date}</td>
-    <td>${obj.channel_url !== 'N/A' ? obj.channel_url : 'N/A'}</td>
+    <td>${obj.channel_url !== 'N/A' ? `<span class="mono nowrap">${escapeHtml(obj.channel_url)}</span>` : 'N/A'}</td>
     <td>${obj.channel_name}</td>
     <td>${obj.subscribers}</td>
     <td>${obj.status}${obj.error ? ' - ' + obj.error : ''}</td>
   `;
-  tr.innerHTML = html;
   tbody.appendChild(tr);
 }
 
-btn.addEventListener("click", async () => {
+btn.addEventListener('click', async () => {
   const lines = ta.value.split(/\n+/).map(s => s.trim()).filter(Boolean);
-  if(!lines.length){
-    alert("Please paste at least one VK video URL.");
-    return;
-  }
+  if(!lines.length){ alert('Please paste at least one VK video URL.'); return; }
   btn.disabled = true; tbody.innerHTML=''; statusEl.textContent = 'Scraping...';
   try{
-    // progressive UX: pre-create rows with placeholder
-    lines.forEach((u,i)=> addRow({
-      input_url: u, title: '…', duration_seconds: '…', duration_hhmmss: '…',
-      views: '…', upload_date: '…', channel_url: '…', channel_name: '…',
-      subscribers: '…', status: 'Fetching'
-    }, i));
     const res = await fetch('/api/scrape', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ urls: lines })
     });
     const json = await res.json();
-    // replace rows with actual data
-    tbody.innerHTML = '';
     (json.results || []).forEach((r, i) => addRow(r, i));
     statusEl.textContent = `Done. ${json.results?.length || 0} URL(s).`;
   }catch(e){
