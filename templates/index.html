@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>VK Video Scraper</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;max-width:980px;margin:32px auto;padding:0 16px}
-    textarea{width:100%;min-height:160px;padding:12px;border-radius:12px;border:1px solid #ddd}
+    textarea{width:100%;min-height:180px;padding:12px;border-radius:12px;border:1px solid #ddd}
     button{padding:10px 16px;border-radius:12px;border:0;background:#111;color:#fff;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
     .row{display:flex;gap:8px;align-items:center;margin:12px 0}
@@ -14,18 +14,19 @@
     th,td{border:1px solid #e6e6e6;padding:8px;font-size:14px;vertical-align:top}
     th{background:#fafafa;text-align:left}
     .muted{color:#777}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    #status{margin-left:12px}
   </style>
 </head>
 <body>
   <h1>VK Video Scraper</h1>
-  <p class="muted">Paste one <b>VK video URL</b> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
+  <p class="muted">Paste one <strong>VK video URL</strong> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
 
   <div class="row">
     <textarea id="urls" placeholder="Created by Vansh Chaudhary
 
 https://vk.com/video-12345_67890
-https://vk.com/video12345_67890"></textarea>
+https://vk.com/video-11111_22222"></textarea>
   </div>
   <div class="row">
     <button id="scrapeBtn">Scrape</button>
@@ -35,5 +36,22 @@ https://vk.com/video12345_67890"></textarea>
   <table id="results">
     <thead>
       <tr>
-        <th>#</th><th>Input URL</th><th>Title</th><th>Duration (s)</th><th>Duration (HH:MM:SS)</th>
-        <th>Views</th><th>Upload Date</th><th>Channel URL</th><th>C
+        <th>#</th>
+        <th>Input URL</th>
+        <th>Title</th>
+        <th>Duration (s)</th>
+        <th>Duration (HH:MM:SS)</th>
+        <th>Views</th>
+        <th>Upload Date</th>
+        <th>Channel URL</th>
+        <th>Channel Name</th>
+        <th>Subscribers</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
