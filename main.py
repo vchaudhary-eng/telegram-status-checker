@@ -3,18 +3,16 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-from pydantic import BaseModel
-from typing import List, Any
 import httpx
 from bs4 import BeautifulSoup
+from pydantic import BaseModel
+from typing import List, Any
 import asyncio
 
 from parsers import extract_with_selectors, seconds_to_hhmmss
 
 app = FastAPI(title="VK Video Scraper")
 
-# CORS (same-origin + external frontends के लिए)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,14 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# static + templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-
 class ScrapeBody(BaseModel):
     urls: List[str]
-
 
 HEADERS = {
     "User-Agent": (
@@ -40,16 +35,15 @@ HEADERS = {
     ),
     "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
 }
-TIMEOUT = httpx.Timeout(20.0, connect=20.0)
 
+TIMEOUT = httpx.Timeout(25.0, connect=25.0)
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-
 async def fetch_one(client: httpx.AsyncClient, url: str) -> dict[str, Any]:
-    out = {
+    result = {
         "input_url": url,
         "title": "N/A",
         "duration_seconds": "N/A",
@@ -63,66 +57,40 @@ async def fetch_one(client: httpx.AsyncClient, url: str) -> dict[str, Any]:
         "error": None,
     }
     try:
-        r = await client.get(url, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
-        text = r.text
+        resp = await client.get(url, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
+        text = resp.text
         soup = BeautifulSoup(text, "lxml")
-
         data = extract_with_selectors(soup, text)
 
-        title = data.get("title")
-        dur = data.get("duration_seconds")
-        views = data.get("views")
-        up = data.get("upload_date")
-        ch_url = data.get("channel_url")
-        ch_name = data.get("channel_name")
-        subs = data.get("subscribers")
+        if data.get("title"):                    result["title"] = data["title"]
+        if isinstance(data.get("duration_seconds"), int):
+            result["duration_seconds"] = data["duration_seconds"]
+            result["duration_hhmmss"] = seconds_to_hhmmss(data["duration_seconds"]) or "N/A"
+        if isinstance(data.get("views"), int):   result["views"] = data["views"]
+        if data.get("upload_date"):              result["upload_date"] = data["upload_date"]
+        if data.get("channel_url"):              result["channel_url"] = data["channel_url"]
+        if data.get("channel_name"):             result["channel_name"] = data["channel_name"]
+        if isinstance(data.get("subscribers"), int):
+            result["subscribers"] = data["subscribers"]
 
-        if title:
-            out["title"] = title
-        if isinstance(dur, int):
-            out["duration_seconds"] = dur
-            out["duration_hhmmss"] = seconds_to_hhmmss(dur)
-        if isinstance(views, int):
-            out["views"] = views
-        if up:
-            out["upload_date"] = up
-        if ch_url:
-            out["channel_url"] = ch_url
-        if ch_name:
-            out["channel_name"] = ch_name
-        if isinstance(subs, int):
-            out["subscribers"] = subs
-
-        out["status"] = "Success"
+        result["status"] = "Success"
     except Exception as e:
-        out["error"] = str(e)
-    return out
-
+        result["error"] = str(e)
+    return result
 
 @app.post("/api/scrape")
 async def api_scrape(body: ScrapeBody):
     urls = [u.strip() for u in body.urls if u and u.strip()]
     if not urls:
         return JSONResponse({"results": []})
-
     async with httpx.AsyncClient() as client:
-        results = await gather_limited(client, urls, limit=5)
+        sem = asyncio.Semaphore(5)
+        async def run(u): 
+            async with sem:
+                return await fetch_one(client, u)
+        tasks = [asyncio.create_task(run(u)) for u in urls]
+        results = [await t for t in asyncio.as_completed(tasks)]
     return JSONResponse({"results": results})
-
-
-async def gather_limited(client: httpx.AsyncClient, urls: List[str], limit: int = 5):
-    sem = asyncio.Semaphore(limit)
-    res = []
-
-    async def run(u):
-        async with sem:
-            return await fetch_one(client, u)
-
-    tasks = [asyncio.create_task(run(u)) for u in urls]
-    for t in asyncio.as_completed(tasks):
-        res.append(await t)
-    return res
-
 
 if __name__ == "__main__":
     import uvicorn
