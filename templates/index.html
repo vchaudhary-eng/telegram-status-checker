@@ -1,34 +1,30 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>VK Video Scraper</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;max-width:980px;margin:32px auto;padding:0 16px}
-    textarea{width:100%;min-height:180px;padding:12px;border-radius:12px;border:1px solid #ddd}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;max-width:1000px;margin:32px auto;padding:0 16px}
+    textarea{width:100%;min-height:220px;padding:12px;border-radius:12px;border:1px solid #ddd}
     button{padding:10px 16px;border-radius:12px;border:0;background:#111;color:#fff;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .row{display:flex;gap:8px;align-items:center;margin:12px 0}
     table{width:100%;border-collapse:collapse;margin-top:16px}
     th,td{border:1px solid #e6e6e6;padding:8px;font-size:14px;vertical-align:top}
     th{background:#fafafa;text-align:left}
     .muted{color:#777}
     .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    #status{margin-left:12px}
+    a{color:#0b57d0;text-decoration:none}
   </style>
 </head>
 <body>
   <h1>VK Video Scraper</h1>
-  <p class="muted">Paste one <strong>VK video URL</strong> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
+  <p class="muted">Paste one <b>VK video URL</b> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
 
-  <div class="row">
-    <textarea id="urls" placeholder="Created by Vansh Chaudhary
+  <textarea id="urls" placeholder="Created by Vansh Chaudhary
+https://vk.com/video-12345_67890"></textarea>
 
-https://vk.com/video-12345_67890
-https://vk.com/video-11111_22222"></textarea>
-  </div>
-  <div class="row">
+  <div style="margin:12px 0">
     <button id="scrapeBtn">Scrape</button>
     <span id="status" class="muted"></span>
   </div>
