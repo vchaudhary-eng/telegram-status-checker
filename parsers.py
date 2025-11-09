@@ -1,4 +1,18 @@
 import re
+if m:
+data["duration_seconds"] = int(m.group(1))
+if data["duration_seconds"] is None:
+m = re.search(r"\b\"duration\"\s*:\s*(\d{1,7})\b", html)
+if m:
+data["duration_seconds"] = int(m.group(1))
+if data["duration_seconds"] is None:
+# last resort: HH:MM:SS in markup
+m = re.search(r"(\d{1,2}:\d{2}(?::\d{2})?)", html)
+if m:
+data["duration_seconds"] = hhmmss_to_seconds(m.group(1))
+
+
+# --- Views ---
 # Try JSON keys commonly seen: views, viewsCount
 m = re.search(r"\b\"views(?:Count)?\"\s*:\s*(\d{1,12})\b", html)
 if m:
