@@ -9,29 +9,20 @@
     textarea{width:100%;min-height:220px;padding:12px;border-radius:12px;border:1px solid #ddd}
     button{padding:10px 16px;border-radius:12px;border:0;background:#111;color:#fff;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .row{display:flex;gap:8px;align-items:center;margin:12px 0}
     table{width:100%;border-collapse:collapse;margin-top:16px}
     th,td{border:1px solid #e6e6e6;padding:8px;font-size:14px;vertical-align:top}
     th{background:#fafafa;text-align:left}
     .muted{color:#777}
     .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .nowrap{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 380px; display:block}
   </style>
 </head>
 <body>
   <h1>VK Video Scraper</h1>
-  <p class="muted">Paste one <strong>VK video URL</strong> per line. Example:
-    <span class="mono">https://vk.com/video-XXXX_YYYY</span>
-  </p>
+  <p class="muted">Paste one <strong>VK video URL</strong> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
 
-  <div class="row">
-    <textarea id="urls" placeholder="Created by Vansh Chaudhary
-
-https://vk.com/video-12345_67890"></textarea>
-  </div>
-  <div class="row">
-    <button id="scrapeBtn">Scrape</button>
-    <span id="status" class="muted"></span>
-  </div>
+  <textarea id="urls" placeholder="https://vk.com/video-XXXX_YYYY"></textarea>
+  <div style="margin:10px 0"><button id="scrapeBtn">Scrape</button> <span id="status" class="muted"></span></div>
 
   <table id="results">
     <thead>
