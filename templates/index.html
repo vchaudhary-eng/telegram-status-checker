@@ -1,55 +1,39 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Meta Description Scraper</title>
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        textarea { width: 100%; height: 100px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; }
-        th { background: #f0f0f0; }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>VK Video Scraper</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;max-width:980px;margin:32px auto;padding:0 16px}
+    textarea{width:100%;min-height:160px;padding:12px;border-radius:12px;border:1px solid #ddd}
+    button{padding:10px 16px;border-radius:12px;border:0;background:#111;color:#fff;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .row{display:flex;gap:8px;align-items:center;margin:12px 0}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    th,td{border:1px solid #e6e6e6;padding:8px;font-size:14px;vertical-align:top}
+    th{background:#fafafa;text-align:left}
+    .muted{color:#777}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  </style>
 </head>
 <body>
-    <h2>Meta Description Scraper</h2>
-    <textarea id="urls" placeholder="Paste one URL per line"></textarea><br><br>
-    <button onclick="startScraping()">Start Scraping</button>
+  <h1>VK Video Scraper</h1>
+  <p class="muted">Paste one <b>VK video URL</b> per line. Example: <span class="mono">https://vk.com/video-XXXX_YYYY</span></p>
 
-    <table id="resultTable">
-        <thead>
-            <tr>
-                <th>URL</th>
-                <th>Meta Description</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+  <div class="row">
+    <textarea id="urls" placeholder="Created by Vansh Chaudhary
 
-    <script>
-        async function startScraping() {
-            const urls = document.getElementById("urls").value.split("\n").map(u => u.trim()).filter(u => u);
-            const tbody = document.querySelector("#resultTable tbody");
-            tbody.innerHTML = "";
+https://vk.com/video-12345_67890
+https://vk.com/video12345_67890"></textarea>
+  </div>
+  <div class="row">
+    <button id="scrapeBtn">Scrape</button>
+    <span id="status" class="muted"></span>
+  </div>
 
-            for (const url of urls) {
-                const formData = new FormData();
-                formData.append("url", url);
-
-                try {
-                    const res = await fetch("/api/scrape", {
-                        method: "POST",
-                        body: formData
-                    });
-                    const data = await res.json();
-                    const row = `<tr><td>${data.url}</td><td>${data.description}</td></tr>`;
-                    tbody.insertAdjacentHTML("beforeend", row);
-                } catch (err) {
-                    const row = `<tr><td>${url}</td><td>Error fetching</td></tr>`;
-                    tbody.insertAdjacentHTML("beforeend", row);
-                }
-            }
-        }
-    </script>
-</body>
-</html>
+  <table id="results">
+    <thead>
+      <tr>
+        <th>#</th><th>Input URL</th><th>Title</th><th>Duration (s)</th><th>Duration (HH:MM:SS)</th>
+        <th>Views</th><th>Upload Date</th><th>Channel URL</th><th>C
