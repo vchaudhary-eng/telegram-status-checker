@@ -60,13 +60,4 @@ result["subscribers"] = subs
 
 result["status"] = "Success"
 except Exception as e:
-result["error"] = str(e)
-return result
-
-
-
-
-@app.post("/api/scrape")
-async def api_scrape(body: ScrapeBody):
-urls = [u.strip() for u in body.urls if u and u.strip()]
-if not urls:
+result["
