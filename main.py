@@ -3,10 +3,10 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import httpx
-from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from typing import List, Any
+import httpx
+from bs4 import BeautifulSoup
 import asyncio
 
 from parsers import extract_with_selectors, seconds_to_hhmmss
@@ -24,19 +24,17 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-class ScrapeBody(BaseModel):
-    urls: List[str]
-
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ),
     "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
 }
+TIMEOUT = httpx.Timeout(25.0, connect=20.0)
 
-TIMEOUT = httpx.Timeout(25.0, connect=25.0)
+class ScrapeBody(BaseModel):
+    urls: List[str]
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -57,39 +55,54 @@ async def fetch_one(client: httpx.AsyncClient, url: str) -> dict[str, Any]:
         "error": None,
     }
     try:
-        resp = await client.get(url, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
-        text = resp.text
+        r = await client.get(url, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
+        text = r.text
         soup = BeautifulSoup(text, "lxml")
-        data = extract_with_selectors(soup, text)
 
-        if data.get("title"):                    result["title"] = data["title"]
-        if isinstance(data.get("duration_seconds"), int):
-            result["duration_seconds"] = data["duration_seconds"]
-            result["duration_hhmmss"] = seconds_to_hhmmss(data["duration_seconds"]) or "N/A"
-        if isinstance(data.get("views"), int):   result["views"] = data["views"]
-        if data.get("upload_date"):              result["upload_date"] = data["upload_date"]
-        if data.get("channel_url"):              result["channel_url"] = data["channel_url"]
-        if data.get("channel_name"):             result["channel_name"] = data["channel_name"]
-        if isinstance(data.get("subscribers"), int):
-            result["subscribers"] = data["subscribers"]
+        d = extract_with_selectors(soup, text)
+
+        if d.get("title"):
+            result["title"] = d["title"]
+        if isinstance(d.get("duration_seconds"), int):
+            result["duration_seconds"] = d["duration_seconds"]
+            result["duration_hhmmss"] = seconds_to_hhmmss(d["duration_seconds"])
+        if isinstance(d.get("views"), int):
+            result["views"] = d["views"]
+        if d.get("upload_date"):
+            result["upload_date"] = d["upload_date"]
+        if d.get("channel_url"):
+            result["channel_url"] = d["channel_url"]
+        if d.get("channel_name"):
+            result["channel_name"] = d["channel_name"]
+        if isinstance(d.get("subscribers"), int):
+            result["subscribers"] = d["subscribers"]
 
         result["status"] = "Success"
     except Exception as e:
         result["error"] = str(e)
     return result
 
+async def gather_limited(client: httpx.AsyncClient, urls: List[str], limit: int = 5):
+    sem = asyncio.Semaphore(limit)
+    out = []
+
+    async def run(u: str):
+        async with sem:
+            return await fetch_one(client, u)
+
+    tasks = [asyncio.create_task(run(u)) for u in urls]
+    for t in asyncio.as_completed(tasks):
+        out.append(await t)
+    return out
+
 @app.post("/api/scrape")
 async def api_scrape(body: ScrapeBody):
     urls = [u.strip() for u in body.urls if u and u.strip()]
     if not urls:
         return JSONResponse({"results": []})
+
     async with httpx.AsyncClient() as client:
-        sem = asyncio.Semaphore(5)
-        async def run(u): 
-            async with sem:
-                return await fetch_one(client, u)
-        tasks = [asyncio.create_task(run(u)) for u in urls]
-        results = [await t for t in asyncio.as_completed(tasks)]
+        results = await gather_limited(client, urls, limit=5)
     return JSONResponse({"results": results})
 
 if __name__ == "__main__":
